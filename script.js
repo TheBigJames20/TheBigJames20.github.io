@@ -1,100 +1,80 @@
-// Theme toggle
-const body = document.body;
-const toggleBtn = document.querySelector(".theme-toggle");
-const toggleIcon = document.querySelector(".theme-toggle-icon");
+// Simple rain animation on the canvas
 
-const THEME_KEY = "jt_theme";
+const canvas = document.getElementById("rain-canvas");
+const ctx = canvas.getContext("2d");
 
-function setTheme(theme) {
-  if (theme === "light") {
-    body.classList.add("theme-light");
-    body.classList.remove("theme-dark");
-    if (toggleIcon) toggleIcon.textContent = "☀";
-  } else {
-    body.classList.add("theme-dark");
-    body.classList.remove("theme-light");
-    if (toggleIcon) toggleIcon.textContent = "☾";
-  }
-  localStorage.setItem(THEME_KEY, theme);
+let drops = [];
+const NUM_DROPS = 320;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 
-const savedTheme = localStorage.getItem(THEME_KEY);
-if (savedTheme) {
-  setTheme(savedTheme);
-} else {
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(prefersDark ? "dark" : "light");
-}
-
-if (toggleBtn) {
-  toggleBtn.addEventListener("click", () => {
-    const current = body.classList.contains("theme-light") ? "light" : "dark";
-    setTheme(current === "light" ? "dark" : "light");
-  });
-}
-
-// IntersectionObserver to reveal sections
-const revealEls = document.querySelectorAll(".reveal");
-const observer = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("visible");
-        observer.unobserve(entry.target);
-      }
-    });
-  },
-  { threshold: 0.15 }
-);
-
-revealEls.forEach((el) => observer.observe(el));
-
-// Active nav link on scroll
-const navLinks = document.querySelectorAll(".nav-link");
-
-function updateActiveNav() {
-  let currentId = "";
-  const sections = document.querySelectorAll("main section[id]");
-
-  const scrollPos = window.scrollY + 120;
-  sections.forEach((section) => {
-    if (section.offsetTop <= scrollPos) {
-      currentId = section.id;
-    }
-  });
-
-  navLinks.forEach((link) => {
-    const hrefId = link.getAttribute("href").slice(1);
-    if (hrefId === currentId) {
-      link.classList.add("active");
-    } else {
-      link.classList.remove("active");
-    }
-  });
-}
-
-window.addEventListener("scroll", updateActiveNav);
-updateActiveNav();
-
-// Smooth scroll for nav links (for older browsers)
-navLinks.forEach((link) => {
-  link.addEventListener("click", (e) => {
-    const targetId = link.getAttribute("href");
-    if (targetId.startsWith("#")) {
-      const targetEl = document.querySelector(targetId);
-      if (targetEl) {
-        e.preventDefault();
-        window.scrollTo({
-          top: targetEl.offsetTop - 72,
-          behavior: "smooth",
-        });
-      }
-    }
-  });
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  initRain();
 });
 
-// Dynamic year in footer
-const yearSpan = document.getElementById("year");
-if (yearSpan) {
-  yearSpan.textContent = new Date().getFullYear();
+function initRain() {
+  drops = [];
+  for (let i = 0; i < NUM_DROPS; i++) {
+    drops.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      len: 14 + Math.random() * 20,
+      speed: 6 + Math.random() * 6,
+      opacity: 0.35 + Math.random() * 0.35
+    });
+  }
 }
+
+function drawRain() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = "rgba(200, 240, 255, 0.9)";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+
+  for (let i = 0; i < drops.length; i++) {
+    const d = drops[i];
+    ctx.globalAlpha = d.opacity;
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y);
+    ctx.lineTo(d.x, d.y + d.len);
+    ctx.stroke();
+
+    d.y += d.speed;
+    if (d.y > canvas.height) {
+      d.y = -20;
+      d.x = Math.random() * canvas.width;
+      d.speed = 6 + Math.random() * 6;
+      d.len = 14 + Math.random() * 20;
+    }
+  }
+
+  requestAnimationFrame(drawRain);
+}
+
+// Smooth scroll for nav (basic)
+document.addEventListener("click", (e) => {
+  if (e.target.matches("nav a[href^='#']")) {
+    e.preventDefault();
+    const targetId = e.target.getAttribute("href");
+    const el = document.querySelector(targetId);
+    if (el) {
+      window.scrollTo({
+        top: el.offsetTop - 72,
+        behavior: "smooth"
+      });
+    }
+  }
+});
+
+// Set footer year
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// Init
+resizeCanvas();
+initRain();
+drawRain();
